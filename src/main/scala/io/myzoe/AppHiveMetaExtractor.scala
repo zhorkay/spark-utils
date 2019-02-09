@@ -9,25 +9,27 @@ import org.apache.spark.sql.catalyst.expressions.aggregate._
 object AppHiveMetaExtractor {
   println( "Extracting Hive Meta Table and Column structures" )
 
-  val warehouseLocation = new File("spark-warehouse").getAbsolutePath
-
-
   val spark: SparkSession =
     SparkSession
       .builder()
       .appName("Extracting Hive Meta Table and Column structures")
-      //.config("spark.sql.warehouse.dir", warehouseLocation)
       .config("spark.master", "local")
       .enableHiveSupport()
       .getOrCreate()
 
-  spark.sparkContext.setLogLevel("ERROR")
-
+  //spark.sparkContext.setLogLevel("ERROR")
 
   import spark.implicits._
   import org.apache.spark.sql.functions._
 
   def main(args: Array[String]): Unit = {
+
+    if (args.isEmpty) {
+      println("Targetlocation parameter is missing for exporting metadata")
+      System.exit(1)
+    }
+
+    val targetLocation = args(0)
 
     spark.sql("use default")
     //spark.sql("CREATE DATABASE IF NOT EXISTS landing")
@@ -67,7 +69,7 @@ object AppHiveMetaExtractor {
 
               //println(own)
               //println(tbl)
-              columnListExtra.show()
+              //columnListExtra.show()
 
 
               val tblType = columnListExtra.filter($"col_name" === "Type").select($"data_type").head().getString(0)
@@ -101,8 +103,8 @@ object AppHiveMetaExtractor {
     })
 
 
-    spark.sql("select * from default.all_tables").repartition(1).write.option("delimiter", ";").option("header", "true").csv("/data/all_tables")
-    spark.sql("select * from default.all_table_columns").repartition(1).write.option("delimiter", ";").option("header", "true").csv("/data/all_table_columns")
+    spark.sql("select * from default.all_tables").repartition(1).write.option("delimiter", ";").option("header", "true").csv(targetLocation + "/metadata/all_tables")
+    spark.sql("select * from default.all_table_columns").repartition(1).write.option("delimiter", ";").option("header", "true").csv(targetLocation + "/metadata/all_table_columns")
   }
 
 }
