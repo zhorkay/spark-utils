@@ -17,7 +17,7 @@ object AppHiveMetaExtractor {
       .enableHiveSupport()
       .getOrCreate()
 
-  //spark.sparkContext.setLogLevel("ERROR")
+  //
 
   import spark.implicits._
   import org.apache.spark.sql.functions._
@@ -32,6 +32,11 @@ object AppHiveMetaExtractor {
     val targetLocation = args(0)
     val showInd = args(1).toInt
     val showNum = args(2).toInt
+    val logInd = args(3).toInt
+
+    if (logInd == 0) {
+      spark.sparkContext.setLogLevel("ERROR")
+    }
 
     spark.sql("use default")
     //spark.sql("CREATE DATABASE IF NOT EXISTS landing")
