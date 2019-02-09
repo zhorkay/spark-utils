@@ -30,6 +30,7 @@ object AppHiveMetaExtractor {
     }
 
     val targetLocation = args(0)
+    val showInd = args(1).toInt
 
     spark.sql("use default")
     //spark.sql("CREATE DATABASE IF NOT EXISTS landing")
@@ -67,9 +68,12 @@ object AppHiveMetaExtractor {
 
               // Table details
 
-              //println(own)
-              //println(tbl)
-              //columnListExtra.show()
+              if (showInd == 1) {
+                println(own)
+                println(tbl)
+                columnListExtra.show()
+              }
+
 
 
               val tblType = columnListExtra.filter($"col_name" === "Type").select($"data_type").head().getString(0)
