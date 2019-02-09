@@ -31,6 +31,7 @@ object AppHiveMetaExtractor {
 
     val targetLocation = args(0)
     val showInd = args(1).toInt
+    val showNum = args(2).toInt
 
     spark.sql("use default")
     //spark.sql("CREATE DATABASE IF NOT EXISTS landing")
@@ -71,17 +72,46 @@ object AppHiveMetaExtractor {
               if (showInd == 1) {
                 println(own)
                 println(tbl)
-                columnListExtra.show()
+                columnListExtra.show(showNum)
               }
 
 
 
-              val tblType = columnListExtra.filter($"col_name" === "Type").select($"data_type").head().getString(0)
-              val tblProvider = columnListExtra.filter($"col_name" === "Provider").select($"data_type").head().getString(0)
-              val tblProperties = columnListExtra.filter($"col_name" === "Table Properties").select($"data_type").head().getString(0)
-              val tblLocation = columnListExtra.filter($"col_name" === "Location").select($"data_type").head().getString(0)
-              val tblSerdeProperties = columnListExtra.filter($"col_name" === "Serde Library").select($"data_type").head().getString(0)
-              val tblStorageProperties = columnListExtra.filter($"col_name" === "Storage Properties").select($"data_type").head().getString(0)
+              var tblType = "NA"
+              val tblTypeFilter = columnListExtra.filter($"col_name" === "Type").select($"data_type")
+              if (!tblTypeFilter.isEmpty) {
+                tblType = tblTypeFilter.head().getString(0)
+              }
+
+              var tblProvider = "NA"
+              val tblProviderFilter = columnListExtra.filter($"col_name" === "Provider").select($"data_type")
+              if (!tblProviderFilter.isEmpty) {
+                tblProvider = tblProviderFilter.head().getString(0)
+              }
+
+              var tblProperties = "NA"
+              val tblPropertiesFilter = columnListExtra.filter($"col_name" === "Table Properties").select($"data_type")
+              if (!tblPropertiesFilter.isEmpty) {
+                tblProperties = tblPropertiesFilter.head().getString(0)
+              }
+
+              var tblLocation = "NA"
+              val tblLocationFilter = columnListExtra.filter($"col_name" === "Location").select($"data_type")
+              if (!tblLocationFilter.isEmpty) {
+                tblLocation = tblLocationFilter.head().getString(0)
+              }
+
+              var tblSerdeProperties = "NA"
+              val tblSerdePropertiesFilter = columnListExtra.filter($"col_name" === "Serde Library").select($"data_type")
+              if (!tblSerdePropertiesFilter.isEmpty) {
+                tblSerdeProperties = tblSerdePropertiesFilter.head().getString(0)
+              }
+
+              var tblStorageProperties = "NA"
+              val tblStoragePropertiesFilter = columnListExtra.filter($"col_name" === "Storage Properties").select($"data_type")
+              if (!tblStoragePropertiesFilter.isEmpty) {
+                tblStorageProperties = tblStoragePropertiesFilter.head().getString(0)
+              }
 
               spark.sql(s"insert into default.all_tables select '${own}' as owner, '${tbl}' as table_name, '${tblType}' as table_type, '${tblProvider}' as table_provider, '${tblProperties}' as table_properties, '${tblLocation}' as table_location, '${tblSerdeProperties}' as table_serde_properties, '${tblStorageProperties}' as table_storage_properties")
 
@@ -105,7 +135,6 @@ object AppHiveMetaExtractor {
 
       }
     })
-
 
     spark.sql("select * from default.all_tables").repartition(1).write.option("delimiter", ";").option("header", "true").csv(targetLocation + "/metadata/all_tables")
     spark.sql("select * from default.all_table_columns").repartition(1).write.option("delimiter", ";").option("header", "true").csv(targetLocation + "/metadata/all_table_columns")
