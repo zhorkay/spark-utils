@@ -78,38 +78,38 @@ object AppHiveMetaExtractor {
 
 
               var tblType = "NA"
-              val tblTypeFilter = columnListExtra.filter($"col_name" === "Type").select($"data_type")
-              if (!tblTypeFilter.isEmpty) {
+              val tblTypeFilter = columnListExtra.filter($"col_name" === "Table Type:").select($"data_type")
+              if (tblTypeFilter.count() != 0) {
                 tblType = tblTypeFilter.head().getString(0)
               }
 
               var tblProvider = "NA"
               val tblProviderFilter = columnListExtra.filter($"col_name" === "Provider").select($"data_type")
-              if (!tblProviderFilter.isEmpty) {
+              if (tblProviderFilter.count() != 0) {
                 tblProvider = tblProviderFilter.head().getString(0)
               }
 
               var tblProperties = "NA"
               val tblPropertiesFilter = columnListExtra.filter($"col_name" === "Table Properties").select($"data_type")
-              if (!tblPropertiesFilter.isEmpty) {
+              if (tblPropertiesFilter.count() != 0) {
                 tblProperties = tblPropertiesFilter.head().getString(0)
               }
 
               var tblLocation = "NA"
-              val tblLocationFilter = columnListExtra.filter($"col_name" === "Location").select($"data_type")
-              if (!tblLocationFilter.isEmpty) {
+              val tblLocationFilter = columnListExtra.filter($"col_name" === "Location:").select($"data_type")
+              if (tblLocationFilter.count() != 0) {
                 tblLocation = tblLocationFilter.head().getString(0)
               }
 
               var tblSerdeProperties = "NA"
-              val tblSerdePropertiesFilter = columnListExtra.filter($"col_name" === "Serde Library").select($"data_type")
-              if (!tblSerdePropertiesFilter.isEmpty) {
+              val tblSerdePropertiesFilter = columnListExtra.filter($"col_name" === "Serde Library:").select($"data_type")
+              if (tblSerdePropertiesFilter.count() != 0) {
                 tblSerdeProperties = tblSerdePropertiesFilter.head().getString(0)
               }
 
               var tblStorageProperties = "NA"
               val tblStoragePropertiesFilter = columnListExtra.filter($"col_name" === "Storage Properties").select($"data_type")
-              if (!tblStoragePropertiesFilter.isEmpty) {
+              if (tblStoragePropertiesFilter.count() != 0) {
                 tblStorageProperties = tblStoragePropertiesFilter.head().getString(0)
               }
 
