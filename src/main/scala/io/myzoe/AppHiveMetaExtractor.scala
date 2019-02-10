@@ -30,7 +30,7 @@ object AppHiveMetaExtractor {
     val log = LogManager.getRootLogger
     val startTime = System.currentTimeMillis()
 
-    log.info("HYZ - " + spark.conf.get("spark.app.name") + " started. Duration: " + (System.currentTimeMillis() - startTime) / 1000 + " seconds")
+    log.warn("HYZ - " + spark.conf.get("spark.app.name") + " started. Duration: " + (System.currentTimeMillis() - startTime) / 1000 + " seconds")
     if (args.isEmpty) {
       println("Targetlocation parameter is missing for exporting metadata")
       System.exit(1)
@@ -48,6 +48,8 @@ object AppHiveMetaExtractor {
 
     if (logInd == 0) {
       spark.sparkContext.setLogLevel("ERROR")
+    } else if (logInd == 1) {
+      spark.sparkContext.setLogLevel("WARN")
     }
 
     spark.sql("use default")
@@ -73,7 +75,7 @@ object AppHiveMetaExtractor {
     }
     */
 
-    log.info("HYZ - metatables creation started. Duration: " + (System.currentTimeMillis() - startTime) / 1000 + " seconds")
+    log.warn("HYZ - metatables creation started. Duration: " + (System.currentTimeMillis() - startTime) / 1000 + " seconds")
 
     spark.sql("DROP TABLE IF EXISTS all_tables")
     spark.sql("CREATE TABLE IF NOT EXISTS all_tables (owner STRING, table_name STRING, table_type STRING, table_provider STRING, table_properties STRING, table_location STRING, table_serde_properties STRING, table_storage_properties STRING) ")
@@ -83,14 +85,14 @@ object AppHiveMetaExtractor {
     spark.sql("CREATE TABLE IF NOT EXISTS all_table_columns (owner STRING, table_name STRING, column_name STRING, column_order_id INT, data_type STRING, comment STRING, partition_column_ind VARCHAR(1)) ")
     spark.sql("TRUNCATE TABLE all_table_columns")
 
-    log.info("HYZ - metatables creation finished. Duration: " + (System.currentTimeMillis() - startTime) / 1000 + " seconds")
+    log.warn("HYZ - metatables creation finished. Duration: " + (System.currentTimeMillis() - startTime) / 1000 + " seconds")
 
     var databaseList = spark.sql("show databases")
     if (dbName != "N.A.") {
       databaseList = databaseList.filter($"databaseName" === dbName)
     }
 
-    log.info("HYZ - Dbfilter: " + dbName + "Duration: " + (System.currentTimeMillis() - startTime) / 1000 + " seconds")
+    log.warn("HYZ - Dbfilter: " + dbName + "Duration: " + (System.currentTimeMillis() - startTime) / 1000 + " seconds")
 
     databaseList.show(showNum)
 
@@ -98,7 +100,7 @@ object AppHiveMetaExtractor {
     databaseList.collect().map({
       db => {
         val currentDB = db.getString(0)
-        log.info("HYZ - metatables population for DB: " + currentDB + " started. Duration: " + (System.currentTimeMillis() - startTime) / 1000 + " seconds")
+        log.warn("HYZ - metatables population for DB: " + currentDB + " started. Duration: " + (System.currentTimeMillis() - startTime) / 1000 + " seconds")
         spark.sql(s"use ${currentDB}")
 
         val tableList = spark.sql("show tables")
@@ -112,12 +114,12 @@ object AppHiveMetaExtractor {
           tb => {
             val own = tb.getString(0)
 
-            log.info("HYZ - metatables population for DB: " + own + " and table started. Duration: " + (System.currentTimeMillis() - startTime) / 1000 + " seconds")
+            log.warn("HYZ - metatables population for DB: " + own + " and table started. Duration: " + (System.currentTimeMillis() - startTime) / 1000 + " seconds")
 
             if (!own.isEmpty) {
 
               val tbl = tb.getString(1)
-              log.info("HYZ - metatables population for DB: " + own + " and table: " + tbl + " started. Duration: " + (System.currentTimeMillis() - startTime) / 1000 + " seconds")
+              log.warn("HYZ - metatables population for DB: " + own + " and table: " + tbl + " started. Duration: " + (System.currentTimeMillis() - startTime) / 1000 + " seconds")
 
               val columnList = spark.sql(s"show columns in ${tbl}").select($"col_name".as("column_name"))
                 .withColumn("column_order_id", monotonically_increasing_id() + 1)
@@ -136,37 +138,37 @@ object AppHiveMetaExtractor {
 
 
                 var tblType = "NA"
-                val tblTypeFilter = columnListExtra.filter($"col_name".like("Type")).select($"data_type")
+                val tblTypeFilter = columnListExtra.filter($"col_name".like("%Type%")).select($"data_type")
                 if (tblTypeFilter.count() != 0) {
                   tblType = tblTypeFilter.head().getString(0)
                 }
 
                 var tblProvider = "NA"
-                val tblProviderFilter = columnListExtra.filter($"col_name".like("Provider")).select($"data_type")
+                val tblProviderFilter = columnListExtra.filter($"col_name".like("%Provider%")).select($"data_type")
                 if (tblProviderFilter.count() != 0) {
                   tblProvider = tblProviderFilter.head().getString(0)
                 }
 
                 var tblProperties = "NA"
-                val tblPropertiesFilter = columnListExtra.filter($"col_name".like("Table Properties")).select($"data_type")
+                val tblPropertiesFilter = columnListExtra.filter($"col_name".like("%Table Properties%")).select($"data_type")
                 if (tblPropertiesFilter.count() != 0) {
                   tblProperties = tblPropertiesFilter.head().getString(0)
                 }
 
                 var tblLocation = "NA"
-                val tblLocationFilter = columnListExtra.filter($"col_name".like("Location")).select($"data_type")
+                val tblLocationFilter = columnListExtra.filter($"col_name".like("%Location%")).select($"data_type")
                 if (tblLocationFilter.count() != 0) {
                   tblLocation = tblLocationFilter.head().getString(0)
                 }
 
                 var tblSerdeProperties = "NA"
-                val tblSerdePropertiesFilter = columnListExtra.filter($"col_name".like("Serde Library")).select($"data_type")
+                val tblSerdePropertiesFilter = columnListExtra.filter($"col_name".like("%Serde Library%")).select($"data_type")
                 if (tblSerdePropertiesFilter.count() != 0) {
                   tblSerdeProperties = tblSerdePropertiesFilter.head().getString(0)
                 }
 
                 var tblStorageProperties = "NA"
-                val tblStoragePropertiesFilter = columnListExtra.filter($"col_name".like("Storage Properties")).select($"data_type")
+                val tblStoragePropertiesFilter = columnListExtra.filter($"col_name".like("%Storage Properties%")).select($"data_type")
                 if (tblStoragePropertiesFilter.count() != 0) {
                   tblStorageProperties = tblStoragePropertiesFilter.head().getString(0)
                 }
@@ -194,16 +196,16 @@ object AppHiveMetaExtractor {
             tb.getString(0)
           }
         }
-        log.info("HYZ - metatables population for DB: " + currentDB + " finished. Duration: " + (System.currentTimeMillis() - startTime) / 1000 + " seconds")
+        log.warn("HYZ - metatables population for DB: " + currentDB + " finished. Duration: " + (System.currentTimeMillis() - startTime) / 1000 + " seconds")
         db.getString(0)
       }
 
     })
 
-    log.info("HYZ - metatables export started. Duration: " + (System.currentTimeMillis() - startTime) / 1000 + " seconds")
+    log.warn("HYZ - metatables export started. Duration: " + (System.currentTimeMillis() - startTime) / 1000 + " seconds")
     spark.sql("select * from default.all_tables").repartition(1).write.option("delimiter", ";").option("header", "true").mode("overwrite").csv(targetLocation + "/" + startTime.toString + "/metadata/all_tables")
     spark.sql("select * from default.all_table_columns").repartition(1).write.option("delimiter", ";").option("header", "true").mode("overwrite").csv(targetLocation + "/" + startTime.toString + "/metadata/all_table_columns")
-    log.info("HYZ - metatables export finished. Duration: " + (System.currentTimeMillis() - startTime) / 1000 + " seconds")
+    log.warn("HYZ - metatables export finished. Duration: " + (System.currentTimeMillis() - startTime) / 1000 + " seconds")
 
   }
 
