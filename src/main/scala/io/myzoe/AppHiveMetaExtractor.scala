@@ -119,70 +119,77 @@ object AppHiveMetaExtractor {
               val tbl = tb.getString(1)
               log.info("HYZ - metatables population for DB: " + own + " and table: " + tbl + " started. Duration: " + (System.currentTimeMillis() - startTime) / 1000 + " seconds")
 
-              val columnListExtra = spark.sql(s"describe formatted ${tbl}")
-
-              // Table details
-
-              if (showInd == 1) {
-                println(own)
-                println(tbl)
-                columnListExtra.show(showNum)
-              }
-
-
-
-              var tblType = "NA"
-              val tblTypeFilter = columnListExtra.filter($"col_name".like("Type")).select($"data_type")
-              if (tblTypeFilter.count() != 0) {
-                tblType = tblTypeFilter.head().getString(0)
-              }
-
-              var tblProvider = "NA"
-              val tblProviderFilter = columnListExtra.filter($"col_name".like("Provider")).select($"data_type")
-              if (tblProviderFilter.count() != 0) {
-                tblProvider = tblProviderFilter.head().getString(0)
-              }
-
-              var tblProperties = "NA"
-              val tblPropertiesFilter = columnListExtra.filter($"col_name".like("Table Properties")).select($"data_type")
-              if (tblPropertiesFilter.count() != 0) {
-                tblProperties = tblPropertiesFilter.head().getString(0)
-              }
-
-              var tblLocation = "NA"
-              val tblLocationFilter = columnListExtra.filter($"col_name".like("Location")).select($"data_type")
-              if (tblLocationFilter.count() != 0) {
-                tblLocation = tblLocationFilter.head().getString(0)
-              }
-
-              var tblSerdeProperties = "NA"
-              val tblSerdePropertiesFilter = columnListExtra.filter($"col_name".like("Serde Library")).select($"data_type")
-              if (tblSerdePropertiesFilter.count() != 0) {
-                tblSerdeProperties = tblSerdePropertiesFilter.head().getString(0)
-              }
-
-              var tblStorageProperties = "NA"
-              val tblStoragePropertiesFilter = columnListExtra.filter($"col_name".like("Storage Properties")).select($"data_type")
-              if (tblStoragePropertiesFilter.count() != 0) {
-                tblStorageProperties = tblStoragePropertiesFilter.head().getString(0)
-              }
-
-              spark.sql(s"insert into default.all_tables select '${own}' as owner, '${tbl}' as table_name, '${tblType}' as table_type, '${tblProvider}' as table_provider, '${tblProperties}' as table_properties, '${tblLocation}' as table_location, '${tblSerdeProperties}' as table_serde_properties, '${tblStorageProperties}' as table_storage_properties")
-
-              // Column details
               val columnList = spark.sql(s"show columns in ${tbl}").select($"col_name".as("column_name"))
                 .withColumn("column_order_id", monotonically_increasing_id() + 1)
 
-              val columnListJoined = columnListExtra.join(columnList, columnListExtra("col_name") === columnList("column_name"), "left")
+              if (columnList.count() != 0) {
+                val columnListExtra = spark.sql(s"describe formatted ${tbl}")
 
-              val realCols = columnListJoined.filter($"column_name" isNotNull).select($"col_name", $"data_type", $"comment", $"column_order_id")
-                .groupBy("col_name", "data_type", "comment", "column_order_id").agg(count("col_name").as("num_of_col"))
-                .withColumn("partition_column_ind", when($"num_of_col" === 1, "N").otherwise("Y"))
-                .withColumn("table_name", lit(tbl))
-                .withColumn("owner", lit(own))
-                .createOrReplaceTempView("tmp_load_all_table_columns")
+                // Table details
 
-              spark.sql("insert into default.all_table_columns select owner, table_name, col_name, column_order_id, data_type, comment, partition_column_ind from tmp_load_all_table_columns order by owner, table_name, column_order_id")
+                if (showInd == 1) {
+                  println(own)
+                  println(tbl)
+                  columnListExtra.show(showNum)
+                }
+
+
+
+                var tblType = "NA"
+                val tblTypeFilter = columnListExtra.filter($"col_name".like("Type")).select($"data_type")
+                if (tblTypeFilter.count() != 0) {
+                  tblType = tblTypeFilter.head().getString(0)
+                }
+
+                var tblProvider = "NA"
+                val tblProviderFilter = columnListExtra.filter($"col_name".like("Provider")).select($"data_type")
+                if (tblProviderFilter.count() != 0) {
+                  tblProvider = tblProviderFilter.head().getString(0)
+                }
+
+                var tblProperties = "NA"
+                val tblPropertiesFilter = columnListExtra.filter($"col_name".like("Table Properties")).select($"data_type")
+                if (tblPropertiesFilter.count() != 0) {
+                  tblProperties = tblPropertiesFilter.head().getString(0)
+                }
+
+                var tblLocation = "NA"
+                val tblLocationFilter = columnListExtra.filter($"col_name".like("Location")).select($"data_type")
+                if (tblLocationFilter.count() != 0) {
+                  tblLocation = tblLocationFilter.head().getString(0)
+                }
+
+                var tblSerdeProperties = "NA"
+                val tblSerdePropertiesFilter = columnListExtra.filter($"col_name".like("Serde Library")).select($"data_type")
+                if (tblSerdePropertiesFilter.count() != 0) {
+                  tblSerdeProperties = tblSerdePropertiesFilter.head().getString(0)
+                }
+
+                var tblStorageProperties = "NA"
+                val tblStoragePropertiesFilter = columnListExtra.filter($"col_name".like("Storage Properties")).select($"data_type")
+                if (tblStoragePropertiesFilter.count() != 0) {
+                  tblStorageProperties = tblStoragePropertiesFilter.head().getString(0)
+                }
+
+                spark.sql(s"insert into default.all_tables select '${own}' as owner, '${tbl}' as table_name, '${tblType}' as table_type, '${tblProvider}' as table_provider, '${tblProperties}' as table_properties, '${tblLocation}' as table_location, '${tblSerdeProperties}' as table_serde_properties, '${tblStorageProperties}' as table_storage_properties")
+
+                // Column details
+
+
+                val columnListJoined = columnListExtra.join(columnList, columnListExtra("col_name") === columnList("column_name"), "left")
+
+                val realCols = columnListJoined.filter($"column_name" isNotNull).select($"col_name", $"data_type", $"comment", $"column_order_id")
+                  .groupBy("col_name", "data_type", "comment", "column_order_id").agg(count("col_name").as("num_of_col"))
+                  .withColumn("partition_column_ind", when($"num_of_col" === 1, "N").otherwise("Y"))
+                  .withColumn("table_name", lit(tbl))
+                  .withColumn("owner", lit(own))
+                  .createOrReplaceTempView("tmp_load_all_table_columns")
+
+                spark.sql("insert into default.all_table_columns select owner, table_name, col_name, column_order_id, data_type, comment, partition_column_ind from tmp_load_all_table_columns order by owner, table_name, column_order_id")
+              } else {
+                spark.sql(s"insert into default.all_tables select '${own}' as owner, '${tbl}' as table_name, 'XML' as table_type, 'NA' as table_provider, 'NA' as table_properties, 'NA' as table_location, 'NA' as table_serde_properties, 'NA' as table_storage_properties")
+              }
+
             }
             tb.getString(0)
           }
