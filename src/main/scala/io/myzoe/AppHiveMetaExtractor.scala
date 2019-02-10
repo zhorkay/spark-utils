@@ -133,40 +133,40 @@ object AppHiveMetaExtractor {
                   columnListExtra.show(showNum)
                 }
 
-
+                val columnListJoinedNoCol = columnListExtra.join(columnList, columnListExtra("col_name") === columnList("column_name"), "left").filter(columnList("column_name").isNull)
 
                 var tblType = "NA"
-                val tblTypeFilter = columnListExtra.filter(lower($"col_name").like("%type%")).select($"data_type")
+                val tblTypeFilter = columnListJoinedNoCol.filter(regexp_replace(lower($"col_name")," ", "").like("%type%")).select($"data_type")
                 if (tblTypeFilter.count() != 0) {
                   tblType = tblTypeFilter.head().getString(0)
                 }
 
                 var tblProvider = "NA"
-                val tblProviderFilter = columnListExtra.filter(lower($"col_name").like("%provider%")).select($"data_type")
+                val tblProviderFilter = columnListJoinedNoCol.filter(lower($"col_name").like("%provider%")).select($"data_type")
                 if (tblProviderFilter.count() != 0) {
                   tblProvider = tblProviderFilter.head().getString(0)
                 }
 
                 var tblProperties = "NA"
-                val tblPropertiesFilter = columnListExtra.filter(lower($"col_name").like("%table properties%")).select($"data_type")
+                val tblPropertiesFilter = columnListJoinedNoCol.filter(regexp_replace(lower($"col_name")," ", "").like("%tableproperties%")).select($"data_type")
                 if (tblPropertiesFilter.count() != 0) {
                   tblProperties = tblPropertiesFilter.head().getString(0)
                 }
 
                 var tblLocation = "NA"
-                val tblLocationFilter = columnListExtra.filter(lower($"col_name").like("%location%")).select($"data_type")
+                val tblLocationFilter = columnListJoinedNoCol.filter(lower($"col_name").like("%location%")).select($"data_type")
                 if (tblLocationFilter.count() != 0) {
                   tblLocation = tblLocationFilter.head().getString(0)
                 }
 
                 var tblSerdeProperties = "NA"
-                val tblSerdePropertiesFilter = columnListExtra.filter(lower($"col_name").like("%serde library%")).select($"data_type")
+                val tblSerdePropertiesFilter = columnListJoinedNoCol.filter(regexp_replace(lower($"col_name")," ", "").like("%serdelibrary%")).select($"data_type")
                 if (tblSerdePropertiesFilter.count() != 0) {
                   tblSerdeProperties = tblSerdePropertiesFilter.head().getString(0)
                 }
 
                 var tblStorageProperties = "NA"
-                val tblStoragePropertiesFilter = columnListExtra.filter(lower($"col_name").like("%storage properties%")).select($"data_type")
+                val tblStoragePropertiesFilter = columnListJoinedNoCol.filter(regexp_replace(lower($"col_name")," ", "").like("%storageproperties%")).select($"data_type")
                 if (tblStoragePropertiesFilter.count() != 0) {
                   tblStorageProperties = tblStoragePropertiesFilter.head().getString(0)
                 }
