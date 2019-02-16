@@ -133,7 +133,7 @@ object AppHiveMetaExtractor {
                   columnListExtra.show(showNum)
                 }
 
-                val columnListJoinedNoCol = columnListExtra.join(columnList, columnListExtra("col_name") === columnList("column_name"), "left").filter(columnList("column_name").isNull)
+                val columnListJoinedNoCol = columnListExtra.join(columnList, columnListExtra("col_name") === columnList("column_name"), "left").filter(col("column_name") isNull)
 
                 var tblType = "NA"
                 val tblTypeFilter = columnListJoinedNoCol.filter(regexp_replace(lower($"col_name")," ", "").like("%type%")).select($"data_type")
@@ -183,9 +183,12 @@ object AppHiveMetaExtractor {
                   .withColumn("partition_column_ind", when($"num_of_col" === 1, "N").otherwise("Y"))
                   .withColumn("table_name", lit(tbl))
                   .withColumn("owner", lit(own))
-                  .createOrReplaceTempView("tmp_load_all_table_columns")
+                  //.createOrReplaceTempView("tmp_load_all_table_columns")
 
-                spark.sql("insert into default.all_table_columns select owner, table_name, col_name, column_order_id, data_type, comment, partition_column_ind from tmp_load_all_table_columns order by owner, table_name, column_order_id")
+                realCols.select($"owner", $"table_name", $"col_name", $"column_order_id", $"data_type", $"comment", $"partition_column_ind").write.mode("Append").insertInto("default.all_table_columns")
+
+
+                //spark.sql("insert into default.all_table_columns select owner, table_name, col_name, column_order_id, data_type, comment, partition_column_ind from tmp_load_all_table_columns order by owner, table_name, column_order_id")
               } else {
                 spark.sql(s"insert into default.all_tables select '${own}' as owner, '${tbl}' as table_name, 'XML' as table_type, 'NA' as table_provider, 'NA' as table_properties, 'NA' as table_location, 'NA' as table_serde_properties, 'NA' as table_storage_properties")
               }
