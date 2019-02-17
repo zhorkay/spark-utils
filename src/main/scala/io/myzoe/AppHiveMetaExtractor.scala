@@ -42,6 +42,7 @@ object AppHiveMetaExtractor {
     val logInd = args(3).toInt
     val parNum = args(4).toInt
     val dbName = if (args.size > 5 ) args(5).toString else "N.A."
+    val tblList = if (args.size > 6 ) args(6).split(",").toList else List("N.A.")
 
     val forkJoinTaskSupportConfig = new scala.concurrent.forkjoin.ForkJoinPool(parNum)
 
@@ -89,7 +90,7 @@ object AppHiveMetaExtractor {
 
     var databaseList = spark.sql("show databases")
     if (dbName != "N.A.") {
-      databaseList = databaseList.filter($"databaseName" === dbName)
+      databaseList = databaseList.where($"databaseName" === dbName)
     }
 
     log.warn("HYZ - Dbfilter: " + dbName + "Duration: " + (System.currentTimeMillis() - startTime) / 1000 + " seconds")
@@ -103,11 +104,17 @@ object AppHiveMetaExtractor {
         log.warn("HYZ - metatables population for DB: " + currentDB + " started. Duration: " + (System.currentTimeMillis() - startTime) / 1000 + " seconds")
         spark.sql(s"use ${currentDB}")
 
-        val tableList = spark.sql("show tables")
+        val tableList = spark.sql("show tables").collect().filter(r => {
+          if (tblList.head == "N.A.")
+             1 == 1
+          else
+            tblList contains r.getString(1)(0).toString
+        })
 
-        tableList.show(showNum)
+        println(tableList.size)
+        tableList.foreach(println)
 
-        val tableListPar = tableList.collect().par
+        val tableListPar = tableList.par
         tableListPar.tasksupport = new ForkJoinTaskSupport(forkJoinTaskSupportConfig)
 
         tableListPar.map{
@@ -133,40 +140,40 @@ object AppHiveMetaExtractor {
                   columnListExtra.show(showNum)
                 }
 
-                val columnListJoinedNoCol = columnListExtra.join(columnList, columnListExtra("col_name") === columnList("column_name"), "left").filter(col("column_name") isNull)
+                val columnListJoinedNoCol = columnListExtra.join(columnList, columnListExtra("col_name") === columnList("column_name"), "left").where(col("column_name") isNull)
 
                 var tblType = "NA"
-                val tblTypeFilter = columnListJoinedNoCol.filter(regexp_replace(lower($"col_name")," ", "").like("%type%")).select($"data_type")
+                val tblTypeFilter = columnListJoinedNoCol.where(regexp_replace(lower($"col_name")," ", "").like("%type%")).select($"data_type")
                 if (tblTypeFilter.count() != 0) {
                   tblType = tblTypeFilter.head().getString(0)
                 }
 
                 var tblProvider = "NA"
-                val tblProviderFilter = columnListJoinedNoCol.filter(lower($"col_name").like("%provider%")).select($"data_type")
+                val tblProviderFilter = columnListJoinedNoCol.where(lower($"col_name").like("%provider%")).select($"data_type")
                 if (tblProviderFilter.count() != 0) {
                   tblProvider = tblProviderFilter.head().getString(0)
                 }
 
                 var tblProperties = "NA"
-                val tblPropertiesFilter = columnListJoinedNoCol.filter(regexp_replace(lower($"col_name")," ", "").like("%tableproperties%")).select($"data_type")
+                val tblPropertiesFilter = columnListJoinedNoCol.where(regexp_replace(lower($"col_name")," ", "").like("%tableproperties%")).select($"data_type")
                 if (tblPropertiesFilter.count() != 0) {
                   tblProperties = tblPropertiesFilter.head().getString(0)
                 }
 
                 var tblLocation = "NA"
-                val tblLocationFilter = columnListJoinedNoCol.filter(lower($"col_name").like("%location%")).select($"data_type")
+                val tblLocationFilter = columnListJoinedNoCol.where(lower($"col_name").like("%location%")).select($"data_type")
                 if (tblLocationFilter.count() != 0) {
                   tblLocation = tblLocationFilter.head().getString(0)
                 }
 
                 var tblSerdeProperties = "NA"
-                val tblSerdePropertiesFilter = columnListJoinedNoCol.filter(regexp_replace(lower($"col_name")," ", "").like("%serdelibrary%")).select($"data_type")
+                val tblSerdePropertiesFilter = columnListJoinedNoCol.where(regexp_replace(lower($"col_name")," ", "").like("%serdelibrary%")).select($"data_type")
                 if (tblSerdePropertiesFilter.count() != 0) {
                   tblSerdeProperties = tblSerdePropertiesFilter.head().getString(0)
                 }
 
                 var tblStorageProperties = "NA"
-                val tblStoragePropertiesFilter = columnListJoinedNoCol.filter(regexp_replace(lower($"col_name")," ", "").like("%storageproperties%")).select($"data_type")
+                val tblStoragePropertiesFilter = columnListJoinedNoCol.where(regexp_replace(lower($"col_name")," ", "").like("%storageproperties%")).select($"data_type")
                 if (tblStoragePropertiesFilter.count() != 0) {
                   tblStorageProperties = tblStoragePropertiesFilter.head().getString(0)
                 }
@@ -178,7 +185,7 @@ object AppHiveMetaExtractor {
 
                 val columnListJoined = columnListExtra.join(columnList, columnListExtra("col_name") === columnList("column_name"), "left")
 
-                val realCols = columnListJoined.filter($"column_name" isNotNull).select($"col_name", $"data_type", $"comment", $"column_order_id")
+                val realCols = columnListJoined.where($"column_name" isNotNull).select($"col_name", $"data_type", $"comment", $"column_order_id")
                   .groupBy("col_name", "data_type", "comment", "column_order_id").agg(count("col_name").as("num_of_col"))
                   .withColumn("partition_column_ind", when($"num_of_col" === 1, "N").otherwise("Y"))
                   .withColumn("table_name", lit(tbl))
